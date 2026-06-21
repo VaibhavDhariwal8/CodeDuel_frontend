@@ -1,14 +1,36 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../lib/AuthContext";
 import { getSocket } from "../lib/socket";
 import Editor from "@monaco-editor/react";
 
 const DEFAULT_CODE = {
-  python: "print()",
-  javascript: "console.log()",
-  java: "public class Main { public static void main(String[] args) {} }",
-  cpp: "#include <iostream>\nint main() { return 0; }",
+  python: `import sys
+lines = sys.stdin.read().split('\\n')
+# lines[0], lines[1], ... — one input line each, see Examples for the exact format
+`,
+
+  javascript: `const lines = require('fs').readFileSync(0, 'utf8').split('\\n');
+// lines[0], lines[1], ... — one input line each, see Examples for the exact format
+`,
+
+  java: `import java.util.*;
+public class Main {
+  public static void main(String[] args) {
+    Scanner sc = new Scanner(System.in);
+    // sc.nextLine() — one input line each call, see Examples for the exact format
+  }
+}`,
+
+  cpp: `#include <iostream>
+#include <string>
+using namespace std;
+
+int main() {
+    string line;
+    // getline(cin, line) — one input line each call, see Examples for the exact format
+    return 0;
+}`,
 };
 
 function PipStrip({ results, total }) {
@@ -59,6 +81,8 @@ function Timer({ startedAt }) {
 export default function DuelArena() {
   const { matchId } = useParams();
   const { session } = useAuth();
+  const navigate = useNavigate();
+
   const [data, setData] = useState(null);
   const [language, setLanguage] = useState("python");
   const [code, setCode] = useState(DEFAULT_CODE.python);
@@ -66,13 +90,38 @@ export default function DuelArena() {
   const [consoleOut, setConsoleOut] = useState("");
   const [running, setRunning] = useState(false);
 
+  const [submitting, setSubmitting] = useState(false);
+  const [opponentProgress, setOpponentProgress] = useState(null);
+
+  const [showCustom, setShowCustom] = useState(false);
+  const [customInput, setCustomInput] = useState("");
+  const [customOutput, setCustomOutput] = useState(null);
+  const [customRunning, setCustomRunning] = useState(false);
+
   useEffect(() => {
+    const socket = getSocket(session.access_token);
+    socket.emit("duel:join", { matchId });
+
     fetch(`${import.meta.env.VITE_BACKEND_URL}/api/matches/${matchId}`, {
       headers: { Authorization: `Bearer ${session.access_token}` },
     })
       .then((r) => r.json())
       .then(setData);
-  }, [matchId, session]);
+
+    const onProgress = ({ submitterId, testsPassed, testsTotal }) => {
+      if (submitterId !== session.user.id)
+        setOpponentProgress({ testsPassed, testsTotal });
+    };
+    const onEnded = (payload) =>
+      navigate(`/result/${matchId}`, { state: payload });
+
+    socket.on("duel:opponent:progress", onProgress);
+    socket.on("match:ended", onEnded);
+    return () => {
+      socket.off("duel:opponent:progress", onProgress);
+      socket.off("match:ended", onEnded);
+    };
+  }, [matchId, session, navigate]);
 
   function handleRun() {
     setRunning(true);
@@ -96,6 +145,49 @@ export default function DuelArena() {
     );
   }
 
+  function handleSubmit() {
+    setSubmitting(true);
+
+    getSocket(session.access_token).emit(
+      "duel:submit",
+      {
+        matchId,
+        code,
+        language,
+      },
+      ({ testsPassed, testsTotal, error }) => {
+        setSubmitting(false);
+
+        setConsoleOut(
+          error || `Submitted: ${testsPassed}/${testsTotal} tests passed`,
+        );
+      },
+    );
+  }
+
+  function handleCustomRun() {
+    setCustomRunning(true);
+
+    getSocket(session.access_token).emit(
+      "duel:run:custom",
+      {
+        language,
+        code,
+        stdin: customInput,
+      },
+      (res) => {
+        setCustomOutput(res);
+        setCustomRunning(false);
+      },
+    );
+  }
+
+  function handleForfeit() {
+    if (!confirm("Forfeit this match?")) return;
+
+    getSocket(session.access_token).emit("duel:forfeit", { matchId });
+  }
+
   if (!data) return <div className="p-6 text-ink-400">Loading match...</div>;
 
   return (
@@ -110,7 +202,10 @@ export default function DuelArena() {
           </span>
         </div>
         <Timer startedAt={data.match.started_at} />
-        <button className="bg-verdict-fail text-base-950 px-4 py-1.5 rounded text-sm font-medium">
+        <button
+          onClick={handleForfeit}
+          className="bg-verdict-fail text-base-950 px-4 py-1.5 rounded text-sm font-medium"
+        >
           Forfeit
         </button>
       </div>
@@ -160,14 +255,70 @@ export default function DuelArena() {
               <option value="java">Java</option>
               <option value="cpp">C++</option>
             </select>
+            <div className="flex gap-2">
+              <button
+                onClick={handleRun}
+                disabled={running}
+                className="bg-brand-500 px-4 py-1.5 rounded text-sm font-medium disabled:opacity-50"
+              >
+                {running ? "Running…" : "Run"}
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="border border-base-700 px-4 py-1.5 rounded text-sm font-medium"
+              >
+                {submitting ? "Submitting…" : "Submit"}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between px-4 py-1.5 border-b border-base-700 bg-base-950">
+            <p className="text-xs text-ink-400">
+              Reads from <span className="font-mono text-ink-100">stdin</span>,
+              writes to <span className="font-mono text-ink-100">stdout</span>—
+              see Examples for the exact line format.
+            </p>
+
             <button
-              onClick={handleRun}
-              disabled={running}
-              className="bg-brand-500 px-4 py-1.5 rounded text-sm font-medium disabled:opacity-50"
+              onClick={() => setShowCustom((s) => !s)}
+              className="text-xs text-brand-400 underline"
             >
-              {running ? "Running…" : "Run"}
+              {showCustom ? "Hide" : "Custom Input"}
             </button>
           </div>
+
+          {showCustom && (
+            <div className="border-b border-base-700 bg-base-900 p-3 flex flex-col gap-2">
+              <textarea
+                value={customInput}
+                onChange={(e) => setCustomInput(e.target.value)}
+                placeholder="Type stdin here, one value per line..."
+                className="bg-base-950 border border-base-700 rounded p-2 font-mono text-sm h-20"
+              />
+
+              <button
+                onClick={handleCustomRun}
+                disabled={customRunning}
+                className="self-start border border-base-700 px-3 py-1 rounded text-sm"
+              >
+                {customRunning ? "Running…" : "Run with custom input"}
+              </button>
+
+              {customOutput && (
+                <pre className="font-mono text-sm text-ink-400 bg-base-950 rounded p-2 whitespace-pre-wrap">
+                  {customOutput.error
+                    ? `Error: ${customOutput.error}`
+                    : `stdout:\n${customOutput.stdout || "(empty)"}${
+                        customOutput.stderr
+                          ? `\n\nstderr:\n${customOutput.stderr}`
+                          : ""
+                      }`}
+                </pre>
+              )}
+            </div>
+          )}
+
           <Editor
             height="50%"
             theme="vs-dark"
@@ -196,14 +347,35 @@ export default function DuelArena() {
           <p className="text-xs text-ink-400 uppercase font-medium mb-3 tracking-wide">
             Opponent
           </p>
-          <div className="bg-base-950 border border-base-700 rounded p-3 flex flex-col items-center gap-2">
-            <div className="w-12 h-12 rounded-full bg-base-800 flex items-center justify-center font-display text-lg">
-              ?
+
+          {opponentProgress ? (
+            <>
+              <PipStrip
+                results={Object.fromEntries(
+                  Array.from(
+                    { length: opponentProgress.testsPassed },
+                    (_, i) => [i, { passed: true }],
+                  ),
+                )}
+                total={opponentProgress.testsTotal}
+              />
+
+              <p className="text-xs text-ink-400 mt-2">
+                {opponentProgress.testsPassed}/{opponentProgress.testsTotal}{" "}
+                passed
+              </p>
+            </>
+          ) : (
+            <div className="bg-base-950 border border-base-700 rounded p-3 flex flex-col items-center gap-2">
+              <div className="w-12 h-12 rounded-full bg-base-800 flex items-center justify-center font-display text-lg">
+                ?
+              </div>
+
+              <p className="text-sm text-ink-400 text-center">
+                No submissions yet
+              </p>
             </div>
-            <p className="text-sm text-ink-400 text-center">
-              Progress hidden until Day 9 wiring
-            </p>
-          </div>
+          )}
         </div>
       </div>
     </div>
