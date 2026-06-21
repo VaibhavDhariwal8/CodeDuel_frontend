@@ -4,6 +4,8 @@ import { useAuth } from "../lib/AuthContext";
 import { getSocket } from "../lib/socket";
 import Editor from "@monaco-editor/react";
 
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+
 const DEFAULT_CODE = {
   python: `import sys
 lines = sys.stdin.read().split('\\n')
@@ -210,174 +212,203 @@ export default function DuelArena() {
         </button>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        <div className="w-1/3 overflow-y-auto p-5 border-r border-base-700">
-          <p className="text-body-lg leading-relaxed whitespace-pre-wrap mb-6">
-            {data.problem.statement}
-          </p>
-          <p className="text-xs font-medium text-ink-400 uppercase mb-3 tracking-wide">
-            Examples
-          </p>
-          <div className="flex flex-col gap-4">
-            {data.sampleTests.map((t, i) => (
-              <div
-                key={t.id}
-                className="bg-base-900 border border-base-700 rounded p-3"
-              >
-                <p className="text-xs text-ink-400 mb-2 font-medium">
-                  Example {i + 1}
-                </p>
-                <p className="text-xs text-ink-400 mb-1">Input</p>
-                <pre className="font-mono text-sm whitespace-pre-wrap mb-2">
-                  {t.input}
-                </pre>
-                <p className="text-xs text-ink-400 mb-1">Output</p>
-                <pre className="font-mono text-sm whitespace-pre-wrap">
-                  {t.expected_output}
-                </pre>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex-1 flex flex-col">
-          <div className="flex items-center justify-between px-4 py-2 border-b border-base-700 bg-base-900">
-            <select
-              value={language}
-              onChange={(e) => {
-                setLanguage(e.target.value);
-                setCode(DEFAULT_CODE[e.target.value]);
-              }}
-              className="bg-base-800 border border-base-700 rounded px-2 py-1 text-sm"
-            >
-              <option value="python">Python</option>
-              <option value="javascript">JavaScript</option>
-              <option value="java">Java</option>
-              <option value="cpp">C++</option>
-            </select>
-            <div className="flex gap-2">
-              <button
-                onClick={handleRun}
-                disabled={running}
-                className="bg-brand-500 px-4 py-1.5 rounded text-sm font-medium disabled:opacity-50"
-              >
-                {running ? "Running…" : "Run"}
-              </button>
-              <button
-                onClick={handleSubmit}
-                disabled={submitting}
-                className="border border-base-700 px-4 py-1.5 rounded text-sm font-medium"
-              >
-                {submitting ? "Submitting…" : "Submit"}
-              </button>
+      <PanelGroup
+        direction="horizontal"
+        className="flex-1"
+        autoSaveId="duel-arena-layout"
+      >
+        <Panel defaultSize={28} minSize={20} maxSize={45}>
+          <div className="h-full overflow-y-auto p-5 border-r border-base-700">
+            <p className="text-body-lg leading-relaxed whitespace-pre-wrap mb-6">
+              {data.problem.statement}
+            </p>
+            <p className="text-xs font-medium text-ink-400 uppercase mb-3 tracking-wide">
+              Examples
+            </p>
+            <div className="flex flex-col gap-4">
+              {data.sampleTests.map((t, i) => (
+                <div
+                  key={t.id}
+                  className="bg-base-900 border border-base-700 rounded p-3"
+                >
+                  <p className="text-xs text-ink-400 mb-2 font-medium">
+                    Example {i + 1}
+                  </p>
+                  <p className="text-xs text-ink-400 mb-1">Input</p>
+                  <pre className="font-mono text-sm whitespace-pre-wrap mb-2">
+                    {t.input}
+                  </pre>
+                  <p className="text-xs text-ink-400 mb-1">Output</p>
+                  <pre className="font-mono text-sm whitespace-pre-wrap">
+                    {t.expected_output}
+                  </pre>
+                </div>
+              ))}
             </div>
           </div>
+        </Panel>
 
-          <div className="flex items-center justify-between px-4 py-1.5 border-b border-base-700 bg-base-950">
-            <p className="text-xs text-ink-400">
-              Reads from <span className="font-mono text-ink-100">stdin</span>,
-              writes to <span className="font-mono text-ink-100">stdout</span>—
-              see Examples for the exact line format.
+        <PanelResizeHandle className="w-1 bg-base-700 hover:bg-brand-500 transition-colors" />
+
+        <Panel defaultSize={56} minSize={35}>
+          <PanelGroup direction="vertical">
+            <Panel defaultSize={65} minSize={25}>
+              <div className="h-full flex flex-col">
+                <div className="flex items-center justify-between px-4 py-2 border-b border-base-700 bg-base-900">
+                  <select
+                    value={language}
+                    onChange={(e) => {
+                      setLanguage(e.target.value);
+                      setCode(DEFAULT_CODE[e.target.value]);
+                    }}
+                    className="bg-base-800 border border-base-700 rounded px-2 py-1 text-sm"
+                  >
+                    <option value="python">Python</option>
+                    <option value="javascript">JavaScript</option>
+                    <option value="java">Java</option>
+                    <option value="cpp">C++</option>
+                  </select>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleRun}
+                      disabled={running}
+                      className="bg-brand-500 px-4 py-1.5 rounded text-sm font-medium disabled:opacity-50"
+                    >
+                      {running ? "Running…" : "Run"}
+                    </button>
+                    <button
+                      onClick={handleSubmit}
+                      disabled={submitting}
+                      className="border border-base-700 px-4 py-1.5 rounded text-sm font-medium"
+                    >
+                      {submitting ? "Submitting…" : "Submit"}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between px-4 py-1.5 border-b border-base-700 bg-base-950">
+                  <p className="text-xs text-ink-400">
+                    Reads from{" "}
+                    <span className="font-mono text-ink-100">stdin</span>,
+                    writes to{" "}
+                    <span className="font-mono text-ink-100">stdout</span>— see
+                    Examples for the exact line format.
+                  </p>
+
+                  <button
+                    onClick={() => setShowCustom((s) => !s)}
+                    className="text-xs text-brand-400 underline"
+                  >
+                    {showCustom ? "Hide" : "Custom Input"}
+                  </button>
+                </div>
+
+                {showCustom && (
+                  <div className="border-b border-base-700 bg-base-900 p-3 flex flex-col gap-2">
+                    <textarea
+                      value={customInput}
+                      onChange={(e) => setCustomInput(e.target.value)}
+                      placeholder="Type stdin here, one value per line..."
+                      className="bg-base-950 border border-base-700 rounded p-2 font-mono text-sm h-20"
+                    />
+
+                    <button
+                      onClick={handleCustomRun}
+                      disabled={customRunning}
+                      className="self-start border border-base-700 px-3 py-1 rounded text-sm"
+                    >
+                      {customRunning ? "Running…" : "Run with custom input"}
+                    </button>
+
+                    {customOutput && (
+                      <pre className="font-mono text-sm text-ink-400 bg-base-950 rounded p-2 whitespace-pre-wrap">
+                        {customOutput.error
+                          ? `Error: ${customOutput.error}`
+                          : `stdout:\n${customOutput.stdout || "(empty)"}${
+                              customOutput.stderr
+                                ? `\n\nstderr:\n${customOutput.stderr}`
+                                : ""
+                            }`}
+                      </pre>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex-1 min-h-0">
+                  <Editor
+                    height="100%"
+                    theme="vs-dark"
+                    language={language}
+                    value={code}
+                    onChange={setCode}
+                    options={{
+                      fontFamily: "JetBrains Mono",
+                      fontSize: 14,
+                      minimap: { enabled: false },
+                    }}
+                  />
+                </div>
+              </div>
+            </Panel>
+
+            <PanelResizeHandle className="h-1 bg-base-700 hover:bg-brand-500 transition-colors" />
+
+            <Panel defaultSize={35} minSize={15}>
+              <div className="h-full flex flex-col">
+                <div className="flex items-center justify-between px-4 py-2 border-t border-base-700 bg-base-900">
+                  <PipStrip results={results} total={data.sampleTests.length} />
+                  <span className="text-xs text-ink-400">
+                    {Object.keys(results).length}/{data.sampleTests.length}{" "}
+                    sample tests
+                  </span>
+                </div>
+                <pre className="flex-1 overflow-y-auto p-3 font-mono text-sm text-ink-400">
+                  {consoleOut || "Run your code to see output here."}
+                </pre>
+              </div>
+            </Panel>
+          </PanelGroup>
+        </Panel>
+
+        <PanelResizeHandle className="w-1 bg-base-700 hover:bg-brand-500 transition-colors" />
+
+        <Panel defaultSize={16} minSize={12}>
+          <div className="h-full p-4 border-l border-base-700 bg-base-900">
+            <p className="text-xs text-ink-400 uppercase font-medium mb-3 tracking-wide">
+              Opponent
             </p>
 
-            <button
-              onClick={() => setShowCustom((s) => !s)}
-              className="text-xs text-brand-400 underline"
-            >
-              {showCustom ? "Hide" : "Custom Input"}
-            </button>
-          </div>
+            {opponentProgress ? (
+              <>
+                <PipStrip
+                  results={Object.fromEntries(
+                    Array.from(
+                      { length: opponentProgress.testsPassed },
+                      (_, i) => [i, { passed: true }],
+                    ),
+                  )}
+                  total={opponentProgress.testsTotal}
+                />
 
-          {showCustom && (
-            <div className="border-b border-base-700 bg-base-900 p-3 flex flex-col gap-2">
-              <textarea
-                value={customInput}
-                onChange={(e) => setCustomInput(e.target.value)}
-                placeholder="Type stdin here, one value per line..."
-                className="bg-base-950 border border-base-700 rounded p-2 font-mono text-sm h-20"
-              />
+                <p className="text-xs text-ink-400 mt-2">
+                  {opponentProgress.testsPassed}/{opponentProgress.testsTotal}{" "}
+                  passed
+                </p>
+              </>
+            ) : (
+              <div className="bg-base-950 border border-base-700 rounded p-3 flex flex-col items-center gap-2">
+                <div className="w-12 h-12 rounded-full bg-base-800 flex items-center justify-center font-display text-lg">
+                  ?
+                </div>
 
-              <button
-                onClick={handleCustomRun}
-                disabled={customRunning}
-                className="self-start border border-base-700 px-3 py-1 rounded text-sm"
-              >
-                {customRunning ? "Running…" : "Run with custom input"}
-              </button>
-
-              {customOutput && (
-                <pre className="font-mono text-sm text-ink-400 bg-base-950 rounded p-2 whitespace-pre-wrap">
-                  {customOutput.error
-                    ? `Error: ${customOutput.error}`
-                    : `stdout:\n${customOutput.stdout || "(empty)"}${
-                        customOutput.stderr
-                          ? `\n\nstderr:\n${customOutput.stderr}`
-                          : ""
-                      }`}
-                </pre>
-              )}
-            </div>
-          )}
-
-          <Editor
-            height="50%"
-            theme="vs-dark"
-            language={language}
-            value={code}
-            onChange={setCode}
-            options={{
-              fontFamily: "JetBrains Mono",
-              fontSize: 14,
-              minimap: { enabled: false },
-            }}
-          />
-          <div className="flex items-center justify-between px-4 py-2 border-t border-base-700 bg-base-900">
-            <PipStrip results={results} total={data.sampleTests.length} />
-            <span className="text-xs text-ink-400">
-              {Object.keys(results).length}/{data.sampleTests.length} sample
-              tests
-            </span>
-          </div>
-          <pre className="flex-1 overflow-y-auto p-3 font-mono text-sm text-ink-400">
-            {consoleOut || "Run your code to see output here."}
-          </pre>
-        </div>
-
-        <div className="w-64 p-4 border-l border-base-700 bg-base-900">
-          <p className="text-xs text-ink-400 uppercase font-medium mb-3 tracking-wide">
-            Opponent
-          </p>
-
-          {opponentProgress ? (
-            <>
-              <PipStrip
-                results={Object.fromEntries(
-                  Array.from(
-                    { length: opponentProgress.testsPassed },
-                    (_, i) => [i, { passed: true }],
-                  ),
-                )}
-                total={opponentProgress.testsTotal}
-              />
-
-              <p className="text-xs text-ink-400 mt-2">
-                {opponentProgress.testsPassed}/{opponentProgress.testsTotal}{" "}
-                passed
-              </p>
-            </>
-          ) : (
-            <div className="bg-base-950 border border-base-700 rounded p-3 flex flex-col items-center gap-2">
-              <div className="w-12 h-12 rounded-full bg-base-800 flex items-center justify-center font-display text-lg">
-                ?
+                <p className="text-sm text-ink-400 text-center">
+                  No submissions yet
+                </p>
               </div>
-
-              <p className="text-sm text-ink-400 text-center">
-                No submissions yet
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
+            )}
+          </div>
+        </Panel>
+      </PanelGroup>
     </div>
   );
 }
