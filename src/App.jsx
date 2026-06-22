@@ -10,7 +10,7 @@ import { AuthProvider, useAuth } from "./lib/AuthContext";
 import ProtectedRoute from "./lib/ProtectedRoute";
 
 import DuelArena from "./pages/DuelArena";
-import Lobby from "./pages/Lobby";
+import Dashboard from "./pages/Dashboard";
 
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -52,7 +52,7 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Layout>
-                  <Lobby />
+                  <Dashboard />
                 </Layout>
               </ProtectedRoute>
             }
@@ -93,18 +93,22 @@ export default function App() {
           <Route
             path="/profile/:identifier"
             element={
-              <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
+              <Layout>
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              </Layout>
             }
           />
 
           <Route
             path="/history"
             element={
-              <ProtectedRoute>
-                <History />
-              </ProtectedRoute>
+              <Layout>
+                <ProtectedRoute>
+                  <History />
+                </ProtectedRoute>
+              </Layout>
             }
           />
         </Routes>

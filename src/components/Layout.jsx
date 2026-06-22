@@ -11,15 +11,28 @@ import {
   History as HistoryIcon,
 } from "lucide-react";
 import Button from "./ui/Button";
+import QueueModal from "./QueueModal";
+import { useAuth } from "../lib/AuthContext";
+import { useEffect } from "react";
+import { getSocket, disconnectSocket } from "../lib/socket";
 
 export default function Layout({ children }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [queueOpen, setQueueOpen] = useState(false);
   const navigate = useNavigate();
+  const { session } = useAuth();
 
   async function handleLogout() {
+    disconnectSocket();
     await supabase.auth.signOut();
     navigate("/login");
   }
+
+  useEffect(() => {
+    if (!session?.access_token) return;
+
+    getSocket(session.access_token);
+  }, [session]);
 
   return (
     <div className="flex h-screen">
@@ -39,12 +52,13 @@ export default function Layout({ children }) {
           Dashboard
         </Link>
 
-        <Link to="/dashboard" className="mt-1 mb-2">
-          <Button className="w-full flex items-center justify-center gap-2">
-            <Swords size={16} />
-            Quick Match
-          </Button>
-        </Link>
+        <Button
+          onClick={() => setQueueOpen(true)}
+          className="w-full flex items-center justify-center gap-2 mt-1 mb-2"
+        >
+          <Swords size={16} />
+          Quick Match
+        </Button>
 
         <Link
           to="/friends"
@@ -103,6 +117,7 @@ export default function Layout({ children }) {
       </nav>
 
       <main className="flex-1 overflow-y-auto bg-base-950">{children}</main>
+      <QueueModal open={queueOpen} onClose={() => setQueueOpen(false)} />
     </div>
   );
 }

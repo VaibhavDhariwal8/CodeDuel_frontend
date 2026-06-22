@@ -1,34 +1,10 @@
 const TIERS = [
-  {
-    name: "Bronze",
-    min: 0,
-    color: "text-amber-700 border-amber-700/30 bg-amber-700/10",
-  },
-  {
-    name: "Silver",
-    min: 1000,
-    color: "text-ink-100 border-ink-400/30 bg-ink-400/10",
-  },
-  {
-    name: "Gold",
-    min: 1250,
-    color: "text-verdict-warn border-verdict-warn/30 bg-verdict-warn/10",
-  },
-  {
-    name: "Platinum",
-    min: 1450,
-    color: "text-cyan-300 border-cyan-300/30 bg-cyan-300/10",
-  },
-  {
-    name: "Diamond",
-    min: 1650,
-    color: "text-brand-400 border-brand-400/30 bg-brand-400/10",
-  },
-  {
-    name: "Grandmaster",
-    min: 1850,
-    color: "text-verdict-fail border-verdict-fail/30 bg-verdict-fail/10",
-  },
+  { name: "Bronze", min: 0, hex: "#A0522D" },
+  { name: "Silver", min: 1000, hex: "#8A93A6" },
+  { name: "Gold", min: 1250, hex: "#FFB454" },
+  { name: "Platinum", min: 1450, hex: "#59D8C9" },
+  { name: "Diamond", min: 1650, hex: "#9580FF" },
+  { name: "Grandmaster", min: 1850, hex: "#FF5470" },
 ];
 export function tierFor(rating) {
   return (
@@ -38,11 +14,42 @@ export function tierFor(rating) {
   );
 }
 
-export default function RankBadge({ rating, showRating = true }) {
+export default function RankBadge({
+  rating,
+  showRating = true,
+  variant = "pill",
+}) {
   const tier = tierFor(rating);
+  if (variant === "shield") {
+    return (
+      <div className="flex items-center gap-3">
+        <div
+          className="h-14 w-12 clip-shield flex items-center justify-center border"
+          style={{ borderColor: tier.hex, backgroundColor: `${tier.hex}26` }}
+        >
+          <span
+            className="font-display font-bold text-xl"
+            style={{ color: tier.hex }}
+          >
+            {tier.name[0]}
+          </span>
+        </div>
+        {showRating && (
+          <span className="font-mono text-sm" style={{ color: tier.hex }}>
+            {tier.name} · {rating}
+          </span>
+        )}
+      </div>
+    );
+  }
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-mono uppercase tracking-wide ${tier.color}`}
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-mono uppercase tracking-wide"
+      style={{
+        color: tier.hex,
+        borderColor: `${tier.hex}4D`,
+        backgroundColor: `${tier.hex}1A`,
+      }}
     >
       {tier.name}
       {showRating && ` · ${rating}`}

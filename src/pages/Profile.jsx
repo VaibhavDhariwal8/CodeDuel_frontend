@@ -48,7 +48,7 @@ export default function Profile() {
               </span>
             )}
           </h1>
-          <RankBadge rating={data.rating} />
+          <RankBadge rating={data.rating} variant="shield" />
         </div>
       </div>
       <div className="grid grid-cols-3 gap-3">

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../lib/AuthContext";
 import { getSocket } from "../lib/socket";
 import Editor from "@monaco-editor/react";
+import { Check, X } from "lucide-react";
 
 import Button from "../components/ui/Button";
 import Chip from "../components/ui/Chip";
@@ -45,10 +46,11 @@ function PipStrip({ results, total }) {
       {pips.map((r, i) => (
         <div
           key={i}
-          className={`w-3 h-3 rounded-sm flex items-center justify-center text-[8px] font-mono
-          ${r === undefined ? "bg-verdict-pending" : r.passed ? "bg-verdict-pass text-base-950" : "bg-verdict-fail text-base-950"}`}
+          className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center
+          ${r === undefined ? "bg-verdict-pending border-base-700" : r.passed ? "bg-verdict-pass/20 border-verdict-pass/50" : "bg-verdict-fail/20 border-verdict-fail/50"}`}
         >
-          {r === undefined ? "" : r.passed ? "✓" : "×"}
+          {r?.passed && <Check size={9} className="text-verdict-pass" />}
+          {r && !r.passed && <X size={9} className="text-verdict-fail" />}
         </div>
       ))}
     </div>
@@ -89,7 +91,9 @@ export default function DuelArena() {
   const navigate = useNavigate();
 
   const [data, setData] = useState(null);
-  const [language, setLanguage] = useState("python");
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem(`draft-language:${matchId}`) || "python";
+  });
   const [code, setCode] = useState(DEFAULT_CODE.python);
   const [results, setResults] = useState({});
   const [consoleOut, setConsoleOut] = useState("");
@@ -128,6 +132,29 @@ export default function DuelArena() {
       socket.off("match:ended", onEnded);
     };
   }, [matchId, session, navigate]);
+
+  useEffect(() => {
+    console.log("saving language", language);
+    localStorage.setItem(`draft-language:${matchId}`, language);
+  }, [matchId, language]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(`draft:${matchId}:${language}`);
+
+    if (saved !== null) {
+      setCode(saved);
+    } else {
+      setCode(DEFAULT_CODE[language]);
+    }
+  }, [matchId, language]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      localStorage.setItem(`draft:${matchId}:${language}`, code);
+    }, 400);
+
+    return () => clearTimeout(t);
+  }, [code, matchId, language]);
 
   function handleRun() {
     setRunning(true);
@@ -282,20 +309,35 @@ export default function DuelArena() {
             <Panel defaultSize={65} minSize={25}>
               <div className="h-full flex flex-col">
                 <div className="flex items-center justify-between px-4 py-2 border-b border-base-700 bg-base-900">
-                  <select
-                    value={language}
-                    onChange={(e) => {
-                      setLanguage(e.target.value);
-                      setCode(DEFAULT_CODE[e.target.value]);
-                    }}
-                    className="bg-base-800 border border-base-700 rounded px-2 py-1 text-sm"
-                  >
-                    <option value="python">Python</option>
-                    <option value="javascript">JavaScript</option>
-                    <option value="java">Java</option>
-                    <option value="cpp">C++</option>
-                  </select>
+                  <div className="flex gap-1">
+                    {["python", "javascript", "java", "cpp"].map((lang) => (
+                      <button
+                        key={lang}
+                        onClick={() => {
+                          setLanguage(lang);
+                        }}
+                        className={`px-3 py-1.5 text-xs font-mono ${
+                          language === lang
+                            ? "text-ink-100 border-b-2 border-brand-500"
+                            : "text-ink-400 hover:text-ink-100"
+                        }`}
+                      >
+                        {
+                          {
+                            python: "Python",
+                            javascript: "JavaScript",
+                            java: "Java",
+                            cpp: "C++",
+                          }[lang]
+                        }
+                      </button>
+                    ))}
+                  </div>
                   <div className="flex gap-2">
+                    <div className="flex items-center gap-2 mr-2">
+                      <div className="w-2 h-2 rounded-full bg-verdict-pass" />
+                      <span className="text-xs text-ink-400">Draft saved</span>
+                    </div>
                     <Button onClick={handleRun} disabled={running}>
                       {running ? "Running…" : "Run"}
                     </Button>

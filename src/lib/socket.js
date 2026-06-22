@@ -13,3 +13,10 @@ export function getSocket(accessToken) {
 
   return socket;
 }
+
+export function disconnectSocket() {
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
+}
