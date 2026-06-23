@@ -41,13 +41,25 @@ int main() {
 
 function PipStrip({ results, total }) {
   const pips = Array.from({ length: total }, (_, i) => results[i]);
+
   return (
     <div className="flex gap-1">
       {pips.map((r, i) => (
         <div
           key={i}
-          className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center
-          ${r === undefined ? "bg-verdict-pending border-base-700" : r.passed ? "bg-verdict-pass/20 border-verdict-pass/50" : "bg-verdict-fail/20 border-verdict-fail/50"}`}
+          className={`w-3.5 h-3.5 rounded-sm border flex items-center justify-center ${
+            r !== undefined ? "pip-resolve" : ""
+          }
+          ${
+            r === undefined
+              ? "bg-verdict-pending border-base-700"
+              : r.passed
+                ? "bg-verdict-pass/20 border-verdict-pass/50"
+                : "bg-verdict-fail/20 border-verdict-fail/50"
+          }`}
+          style={
+            r !== undefined ? { animationDelay: `${i * 40}ms` } : undefined
+          }
         >
           {r?.passed && <Check size={9} className="text-verdict-pass" />}
           {r && !r.passed && <X size={9} className="text-verdict-fail" />}
@@ -72,7 +84,7 @@ function Timer({ startedAt }) {
   const secs = String(remaining % 60).padStart(2, "0");
   const colorClass =
     remaining < 15
-      ? "text-verdict-fail animate-pulse"
+      ? "text-verdict-fail timer-pulse"
       : remaining < 60
         ? "text-verdict-warn"
         : "text-ink-100";

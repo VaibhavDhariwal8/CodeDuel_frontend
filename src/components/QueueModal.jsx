@@ -3,8 +3,90 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/AuthContext";
 import { getSocket } from "../lib/socket";
 import { Radar, Check } from "lucide-react";
+import { useEscToClose } from "../lib/useEscToClose";
 import Button from "./ui/Button";
 import Card from "./ui/Card";
+
+function MatchFoundCeremony({ opponent, session, onComplete }) {
+  const [step, setStep] = useState("slide");
+  const [count, setCount] = useState(3);
+  const [me, setMe] = useState(null);
+  const reduced =
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/me/profile`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
+      .then((r) => r.json())
+      .then(setMe);
+  }, [session]);
+
+  useEffect(() => {
+    const slideMs = reduced ? 150 : 400;
+    const timers = [
+      setTimeout(() => setStep("vs"), slideMs),
+      setTimeout(() => setStep("count"), slideMs + 500),
+      setTimeout(() => setCount(2), slideMs + 1100),
+      setTimeout(() => setCount(1), slideMs + 1700),
+      setTimeout(onComplete, slideMs + 2300),
+    ];
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  const slid = step !== "slide";
+  const avatarBase = `w-16 h-16 rounded-full bg-base-800 flex items-center justify-center font-display text-xl font-bold border-2 ${reduced ? "transition-opacity duration-150" : "transition-all duration-[400ms] ease-out"}`;
+
+  return (
+    <div className="flex flex-col items-center gap-8 py-4 overflow-hidden">
+      <div className="flex items-center justify-center gap-6">
+        <div
+          className={`${avatarBase} border-brand-500`}
+          style={
+            reduced
+              ? { opacity: slid ? 1 : 0 }
+              : {
+                  transform: slid ? "translateX(0)" : "translateX(-60px)",
+                  opacity: slid ? 1 : 0,
+                }
+          }
+        >
+          {me?.username?.[0]?.toUpperCase() || "?"}
+        </div>
+        <span
+          className={`font-display text-2xl font-bold text-brand-400 transition-opacity duration-200 ${step === "slide" ? "opacity-0" : "opacity-100"}`}
+        >
+          VS
+        </span>
+        <div
+          className={`${avatarBase} border-verdict-fail`}
+          style={
+            reduced
+              ? { opacity: slid ? 1 : 0 }
+              : {
+                  transform: slid ? "translateX(0)" : "translateX(60px)",
+                  opacity: slid ? 1 : 0,
+                }
+          }
+        >
+          {opponent?.username?.[0]?.toUpperCase() || "?"}
+        </div>
+      </div>
+      <div className="h-16 flex items-center">
+        {step === "count" ? (
+          <p className="font-display text-6xl font-bold text-ink-100 tabular-nums">
+            {count}
+          </p>
+        ) : (
+          <p className="text-ink-400 text-sm">
+            vs @{opponent?.username} ({opponent?.rating})
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function QueueModal({ open, onClose }) {
   const { session } = useAuth();
@@ -13,6 +95,9 @@ export default function QueueModal({ open, onClose }) {
   const [difficulty, setDifficulty] = useState("any");
   const [elapsed, setElapsed] = useState(0);
   const [foundInfo, setFoundInfo] = useState(null);
+  const [pendingMatchId, setPendingMatchId] = useState(null);
+
+  useEscToClose(phase === "idle", onClose);
 
   useEffect(() => {
     if (!open) {
@@ -24,10 +109,7 @@ export default function QueueModal({ open, onClose }) {
     const onFound = ({ matchId, opponent }) => {
       setPhase("found");
       setFoundInfo(opponent);
-      setTimeout(() => {
-        onClose();
-        navigate(`/duel/${matchId}`);
-      }, 1200);
+      setPendingMatchId(matchId);
     };
     socket.on("match:found", onFound);
     return () => socket.off("match:found", onFound);
@@ -123,20 +205,14 @@ export default function QueueModal({ open, onClose }) {
           </>
         )}
         {phase === "found" && (
-          <>
-            <div className="w-16 h-16 bg-verdict-pass/20 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Check size={32} className="text-verdict-pass" />
-            </div>
-            <h3 className="font-display text-2xl font-bold mb-2 text-verdict-pass">
-              Match Found!
-            </h3>
-            <p className="text-ink-100 text-sm mb-2">
-              vs @{foundInfo?.username} ({foundInfo?.rating})
-            </p>
-            <p className="font-mono text-ink-400 animate-pulse">
-              Entering arena...
-            </p>
-          </>
+          <MatchFoundCeremony
+            opponent={foundInfo}
+            session={session}
+            onComplete={() => {
+              onClose();
+              navigate(`/duel/${pendingMatchId}`);
+            }}
+          />
         )}
       </Card>
     </div>

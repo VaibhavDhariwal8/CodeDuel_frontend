@@ -14,7 +14,8 @@ export default function Button({
 }) {
   return (
     <button
-      className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-150
+      className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-[120ms] ease-out
+        focus-visible:outline focus-visible:outline-2 focus-visible:outline-brand-500 focus-visible:outline-offset-2
         disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none
         ${variants[variant]} ${className}`}
       {...props}
