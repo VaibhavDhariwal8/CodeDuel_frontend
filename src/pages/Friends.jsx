@@ -2,34 +2,33 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../lib/AuthContext";
 import Button from "../components/ui/Button";
 import Card from "../components/ui/Card";
-import { UserPlus, Check, X, UserMinus } from "lucide-react";
 import Avatar from "../components/ui/Avatar";
+import RankBadge from "../components/ui/RankBadge";
+import { UserPlus, Check, X, UserMinus } from "lucide-react";
 
 export default function Friends() {
   const { session } = useAuth();
   const [friends, setFriends] = useState([]);
+  const [me, setMe] = useState(null);
   const [username, setUsername] = useState("");
   const [error, setError] = useState(null);
-  const [me, setMe] = useState(null);
 
   async function load() {
     const r = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/friends`, {
       headers: { Authorization: `Bearer ${session.access_token}` },
     });
     setFriends(await r.json());
-    const meRes = await fetch(
-      `${import.meta.env.VITE_BACKEND_URL}/api/users/me/profile`,
-      {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      },
-    );
-
-    setMe(await meRes.json());
   }
   useEffect(() => {
     load();
+  }, [session]);
+
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/users/me/profile`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
+      .then((r) => r.json())
+      .then(setMe);
   }, [session]);
 
   async function sendRequest(e) {
@@ -80,9 +79,16 @@ export default function Friends() {
   );
   const accepted = friends.filter((f) => f.status === "accepted");
 
-  const rankedFriends = [...accepted].sort(
-    (a, b) => b.other_rating - a.other_rating,
-  );
+  const ranked = me
+    ? [
+        ...accepted.map((f) => ({
+          username: f.other_username,
+          rating: f.other_rating,
+          isMe: false,
+        })),
+        { username: me.username, rating: me.rating, isMe: true },
+      ].sort((a, b) => b.rating - a.rating)
+    : [];
 
   return (
     <div className="max-w-[1120px] mx-auto p-8">

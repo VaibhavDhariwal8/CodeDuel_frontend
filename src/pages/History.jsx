@@ -2,12 +2,22 @@ import { useEffect, useState } from "react";
 import { useAuth } from "../lib/AuthContext";
 import Card from "../components/ui/Card";
 import Chip from "../components/ui/Chip";
+import Avatar from "../components/ui/Avatar";
 import { Link } from "react-router-dom";
 import { Trophy, Skull, Minus } from "lucide-react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 export default function History() {
   const { session } = useAuth();
   const [matches, setMatches] = useState(null);
+  const [trend, setTrend] = useState(null);
 
   useEffect(() => {
     fetch(`${import.meta.env.VITE_BACKEND_URL}/api/history`, {
@@ -17,7 +27,13 @@ export default function History() {
       .then(setMatches);
   }, [session]);
 
-  if (!matches) return <div className="p-6 text-ink-400">Loading history…</div>;
+  useEffect(() => {
+    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/history/rating-trend`, {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
+      .then((r) => r.json())
+      .then(setTrend);
+  }, [session]);
 
   const breakdown = matches
     ? ["easy", "medium", "hard"].map((d) => {
@@ -29,6 +45,8 @@ export default function History() {
         };
       })
     : [];
+
+  if (!matches) return <div className="p-6 text-ink-400">Loading history…</div>;
 
   return (
     <div className="max-w-[1120px] mx-auto p-8">
@@ -76,7 +94,7 @@ export default function History() {
               </Card>
             )
           )}
-          {matches && matches.length > 0 && (
+          {matches.length > 0 && (
             <Card className="p-4">
               <p className="text-xs text-ink-400 uppercase mb-3">
                 By Difficulty
@@ -106,10 +124,10 @@ export default function History() {
         </div>
 
         <div className="lg:col-span-7 flex flex-col gap-2">
-          {matches?.length === 0 && (
+          {matches.length === 0 && (
             <p className="text-ink-400 text-sm">No completed duels yet.</p>
           )}
-          {matches?.map((m) => (
+          {matches.map((m) => (
             <Link key={m.id} to={`/duel/${m.id}/result`}>
               <Card
                 interactive
