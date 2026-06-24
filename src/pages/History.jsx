@@ -35,30 +35,48 @@ export default function History() {
       .then(setTrend);
   }, [session]);
 
-  const breakdown = matches
-    ? ["easy", "medium", "hard"].map((d) => {
-        const subset = matches.filter((m) => m.difficulty === d);
-        return {
-          difficulty: d,
-          wins: subset.filter((m) => m.youWon).length,
-          total: subset.length,
-        };
-      })
-    : [];
-
   if (!matches) return <div className="p-6 text-ink-400">Loading history…</div>;
+
+  const breakdown = ["easy", "medium", "hard"].map((d) => {
+    const subset = matches.filter((m) => m.difficulty === d);
+    return {
+      difficulty: d,
+      wins: subset.filter((m) => m.youWon).length,
+      total: subset.length,
+    };
+  });
+
+  const recentForm = matches.slice(0, 5);
+
+  let longestStreak = 0,
+    currentRun = 0;
+  for (const m of matches.slice().reverse()) {
+    if (m.youWon) {
+      currentRun++;
+      longestStreak = Math.max(longestStreak, currentRun);
+    } else currentRun = 0;
+  }
+
+  const opponentCounts = {};
+  matches.forEach((m) => {
+    opponentCounts[m.opponent_username] =
+      (opponentCounts[m.opponent_username] || 0) + 1;
+  });
+  const mostPlayed = Object.entries(opponentCounts).sort(
+    (a, b) => b[1] - a[1],
+  )[0];
 
   return (
     <div className="max-w-[1120px] mx-auto p-8">
       <h1 className="font-display text-2xl font-bold mb-6">Match History</h1>
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        <div className="lg:col-span-5 flex flex-col gap-6">
+        <div className="lg:col-span-5 flex flex-col gap-6 sticky top-8 self-start">
           {trend && trend.length > 1 ? (
             <Card className="p-4">
               <p className="text-xs text-ink-400 uppercase mb-3">
                 Rating Over Time
               </p>
-              <ResponsiveContainer width="100%" height={160}>
+              <ResponsiveContainer width="100%" height={140}>
                 <LineChart data={trend}>
                   <XAxis dataKey="created_at" tick={false} stroke="#232938" />
                   <YAxis
@@ -94,6 +112,54 @@ export default function History() {
               </Card>
             )
           )}
+
+          {matches.length > 0 && (
+            <Card className="p-4 flex flex-col gap-4">
+              <div>
+                <p className="text-xs text-ink-400 uppercase mb-2">
+                  Recent Form
+                </p>
+                <div className="flex gap-1.5">
+                  {recentForm.map((m) => (
+                    <div
+                      key={m.id}
+                      className={`w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold
+                      ${m.youWon ? "bg-verdict-pass/20 text-verdict-pass" : m.result_type === "draw" ? "bg-base-700 text-ink-400" : "bg-verdict-fail/20 text-verdict-fail"}`}
+                    >
+                      {m.youWon ? "W" : m.result_type === "draw" ? "D" : "L"}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-ink-400 uppercase">
+                  Longest Streak
+                </span>
+                <span className="font-mono text-verdict-warn font-semibold">
+                  {longestStreak} {longestStreak === 1 ? "win" : "wins"}
+                </span>
+              </div>
+              {mostPlayed && (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-ink-400 uppercase">
+                    Most Played
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Avatar
+                      seed={mostPlayed[0]}
+                      size={24}
+                      className="rounded"
+                    />
+                    <span className="text-sm">
+                      {mostPlayed[0]}{" "}
+                      <span className="text-ink-400">×{mostPlayed[1]}</span>
+                    </span>
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
+
           {matches.length > 0 && (
             <Card className="p-4">
               <p className="text-xs text-ink-400 uppercase mb-3">
