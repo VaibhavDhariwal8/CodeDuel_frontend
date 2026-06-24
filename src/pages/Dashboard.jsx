@@ -9,9 +9,9 @@ import RankBadge from "../components/ui/RankBadge";
 import { Trophy, Skull, Minus, ChevronRight } from "lucide-react";
 import Avatar from "../components/ui/Avatar";
 
-const navigate = useNavigate();
-
 export default function Dashboard() {
+  const navigate = useNavigate();
+
   const { session } = useAuth();
   const [profile, setProfile] = useState(null);
   const [history, setHistory] = useState(null);
